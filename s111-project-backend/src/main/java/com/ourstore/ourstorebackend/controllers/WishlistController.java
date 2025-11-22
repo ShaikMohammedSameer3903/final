@@ -38,7 +38,7 @@ public class WishlistController {
         return wishlist;
     }
 
-    @PostMapping("/add/{userId}")
+    @PostMapping("/{userId}/items")
     public Wishlist addToWishlist(@PathVariable Long userId, @RequestBody Map<String, Object> payload) {
         Long productId = ((Number) payload.get("productId")).longValue();
         User user = userRepository.findById(userId).orElseThrow();
