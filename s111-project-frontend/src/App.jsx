@@ -28,10 +28,24 @@ function App() {
     active: true,
   });
   const [adminMessage, setAdminMessage] = useState('');
+  const [profile, setProfile] = useState(null);
+  const [loggedInUsername, setLoggedInUsername] = useState('');
 
   const getProductImage = (product) => {
     const label = encodeURIComponent(product?.name || 'Our Store');
     return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='400' height='300' fill='%231d4ed8'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-size='20'>${label}</text></svg>`;
+  };
+
+  const fetchProfile = async (uid = userId) => {
+    if (!uid) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${uid}`);
+      if (!response.ok) return;
+      const data = await response.json();
+      setProfile(data);
+    } catch {
+      // silent
+    }
   };
 
   // API base: use same-origin Nginx proxy to avoid CORS issues in Docker
@@ -41,6 +55,12 @@ function App() {
     // Fetch products when the component mounts
     fetchProducts();
   }, []);
+
+  useEffect(() => {
+    if (currentPage === 'profile' && isLoggedIn && userId && !profile) {
+      fetchProfile(userId);
+    }
+  }, [currentPage, isLoggedIn, userId, profile]);
 
   const fetchProducts = async () => {
     try {
@@ -69,6 +89,11 @@ function App() {
 
   const handleRegister = async () => {
     setFeedback('');
+    if (!username || !password) {
+      setFeedback('Username and password are required.');
+      return;
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/users/register`, {
         method: 'POST',
@@ -93,6 +118,11 @@ function App() {
 
   const handleLogin = async () => {
     setFeedback('');
+    if (!username || !password) {
+      setFeedback('Username and password are required.');
+      return;
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/users/login`, {
         method: 'POST',
@@ -110,6 +140,7 @@ function App() {
         if (data.userId) {
           setUserId(data.userId);
         }
+        setLoggedInUsername(username);
         setIsAdmin(data.isAdmin === 'true');
         setUsername('');
         setPassword('');
@@ -119,6 +150,7 @@ function App() {
         fetchCart(data.userId);
         fetchWishlist(data.userId);
         fetchOrders(data.userId);
+        fetchProfile(data.userId);
       }
     } catch (error) {
       setFeedback('Error during login. Please try again.');
@@ -132,6 +164,8 @@ function App() {
     setCart([]);
     setWishlist([]);
     setOrders([]);
+    setProfile(null);
+    setLoggedInUsername('');
     setCurrentPage('home');
   };
 
@@ -154,18 +188,6 @@ function App() {
     }
   };
 
-  const fetchWishlist = async (uid = userId) => {
-    if (!uid) return;
-    try {
-      const response = await fetch(`${API_BASE_URL}/wishlist/${uid}`);
-      if (!response.ok) return;
-      const data = await response.json();
-      setWishlist((data.products || []));
-    } catch {
-      // silent
-    }
-  };
-
   const fetchOrders = async (uid = userId) => {
     if (!uid) return;
     try {
@@ -175,179 +197,6 @@ function App() {
       setOrders(data || []);
     } catch {
       // silent
-    }
-  };
-
-  // Admin product management helpers
-  const resetAdminForm = () => {
-    setAdminForm({
-      id: null,
-      name: '',
-      description: '',
-      price: '',
-      stockQuantity: '',
-      sku: '',
-      imageUrl: '',
-      active: true,
-    });
-    setAdminMessage('');
-  };
-
-  const handleAdminInputChange = (field, value) => {
-    setAdminForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleAdminEditProduct = (product) => {
-    setAdminForm({
-      id: product.id,
-      name: product.name || '',
-      description: product.description || '',
-      price: product.price != null ? product.price : '',
-      stockQuantity: product.stockQuantity != null ? product.stockQuantity : '',
-      sku: product.sku || '',
-      imageUrl: product.imageUrl || '',
-      active: product.active != null ? product.active : true,
-    });
-    setCurrentPage('admin');
-  };
-
-  const handleAdminSaveProduct = async () => {
-    try {
-      const payload = {
-        name: adminForm.name,
-        description: adminForm.description,
-        price: adminForm.price === '' ? 0 : Number(adminForm.price),
-        stockQuantity: adminForm.stockQuantity === '' ? 0 : Number(adminForm.stockQuantity),
-        sku: adminForm.sku,
-        imageUrl: adminForm.imageUrl,
-        active: Boolean(adminForm.active),
-      };
-
-      const isEdit = !!adminForm.id;
-      const url = isEdit
-        ? `${API_BASE_URL}/admin/products/${adminForm.id}`
-        : `${API_BASE_URL}/admin/products`;
-      const method = isEdit ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        setAdminMessage(`Failed to save product (${response.status})`);
-        return;
-      }
-      await fetchProducts();
-      setAdminMessage(isEdit ? 'Product updated successfully.' : 'Product created successfully.');
-      // Keep form values so admin sees what was saved
-    } catch (error) {
-      setAdminMessage('Error saving product.');
-    }
-  };
-
-  const handleAdminDeleteProduct = async (productId) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
-    try {
-      const response = await fetch(`${API_BASE_URL}/admin/products/${productId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        setAdminMessage(`Failed to delete product (${response.status})`);
-        return;
-      }
-      await fetchProducts();
-      setAdminMessage('Product deleted successfully.');
-      if (adminForm.id === productId) {
-        resetAdminForm();
-      }
-    } catch (error) {
-      setAdminMessage('Error deleting product.');
-    }
-  };
-
-  const addToCart = async (product) => {
-    // If user is logged in, sync with backend cart
-    if (userId) {
-      try {
-        await fetch(`${API_BASE_URL}/cart/${userId}/items`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId: product.id, quantity: 1 }),
-        });
-        await fetchCart();
-        return;
-      } catch {
-        // fall back to local cart
-      }
-    }
-
-    // Local fallback
-    setCart(prevCart => {
-      const existingProduct = prevCart.find(item => item.id === product.id);
-      if (existingProduct) {
-        return prevCart.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      }
-      return [...prevCart, { ...product, quantity: 1 }];
-    });
-  };
-
-  const handlePlaceOrder = async () => {
-    if (!userId) {
-      setOrderMessage('Please login to place an order.');
-      setTimeout(() => setOrderMessage(''), 3000);
-      return;
-    }
-    try {
-      const response = await fetch(`${API_BASE_URL}/orders/${userId}`, {
-        method: 'POST',
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setOrderMessage(data.message || `Failed to place order (${response.status})`);
-      } else {
-        setOrderMessage(data.message || 'Order placed successfully!');
-      }
-      await fetchCart();
-      await fetchOrders();
-      setTimeout(() => setOrderMessage(''), 3000);
-    } catch {
-      setOrderMessage('Error placing order.');
-      setTimeout(() => setOrderMessage(''), 3000);
-    }
-  };
-
-  const handleAddToWishlist = async (product) => {
-    if (!userId) {
-      setFeedback('Please login to use wishlist.');
-      return;
-    }
-    try {
-      await fetch(`${API_BASE_URL}/wishlist/${userId}/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: product.id }),
-      });
-      await fetchWishlist();
-    } catch {
-      setFeedback('Error updating wishlist.');
-    }
-  };
-
-  const handleRemoveFromWishlist = async (productId) => {
-    if (!userId) return;
-    try {
-      await fetch(`${API_BASE_URL}/wishlist/${userId}/items/${productId}`, {
-        method: 'DELETE',
-      });
-      await fetchWishlist();
-    } catch {
-      // ignore
     }
   };
 
@@ -372,7 +221,7 @@ function App() {
               </div>
               <div className="home-hero-deals">
                 <div className="deals-card">
-                  <h2 className="section-title">Today&apos;s top picks</h2>
+                  <h2 className="section-title">Today's top picks</h2>
                   <div className="deals-grid">
                     <div className="deal-item deal-green">
                       <h3>Up to 50% off on headphones</h3>
@@ -395,6 +244,70 @@ function App() {
                     <p>{cat}</p>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        );
+      case 'profile':
+        if (!isLoggedIn || !userId) {
+          return (
+            <div className="content">
+              <h2 className="section-title">Your Profile</h2>
+              <p className="subtitle">Please login to view your profile.</p>
+            </div>
+          );
+        }
+        return (
+          <div className="content profile-page">
+            <div className="profile-card">
+              <div className="profile-header">
+                <div className="profile-avatar">
+                  {(profile?.firstName?.[0] || profile?.username?.[0] || loggedInUsername?.[0] || 'U').toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="profile-name">
+                    {profile?.firstName || profile?.username || loggedInUsername || `User #${userId}`}
+                  </h2>
+                  <p className="profile-username">@{profile?.username || loggedInUsername}</p>
+                </div>
+              </div>
+              <div className="profile-details">
+                <div className="profile-detail-row">
+                  <span className="profile-label">Email</span>
+                  <span className="profile-value">{profile?.email || 'Not set'}</span>
+                </div>
+                <div className="profile-detail-row">
+                  <span className="profile-label">Phone</span>
+                  <span className="profile-value">{profile?.phoneNumber || 'Not set'}</span>
+                </div>
+                <div className="profile-detail-row">
+                  <span className="profile-label">Address</span>
+                  <span className="profile-value">
+                    {profile?.address || profile?.city
+                      ? `${profile?.address || ''} ${profile?.city || ''}`.trim()
+                      : 'Not set'}
+                  </span>
+                </div>
+                <div className="profile-detail-row">
+                  <span className="profile-label">Country</span>
+                  <span className="profile-value">{profile?.country || 'Not set'}</span>
+                </div>
+              </div>
+              <div className="profile-stats">
+                <div className="profile-stat">
+                  <span className="profile-stat-number">{orders.length}</span>
+                  <span className="profile-stat-label">Orders</span>
+                </div>
+                <div className="profile-stat">
+                  <span className="profile-stat-number">
+                    {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                  </span>
+                  <span className="profile-stat-label">Items in Cart</span>
+                </div>
+                <div className="profile-stat">
+                  <span className="profile-stat-number">{wishlist.length}</span>
+                  <span className="profile-stat-label">Wishlist</span>
+                </div>
               </div>
             </div>
           </div>
@@ -436,6 +349,7 @@ function App() {
           <div className="content auth-page">
             <div className="auth-form-card">
               <h2 className="section-title">Register</h2>
+              <p className="auth-subtitle">Create your Our Store account to track orders and wishlist.</p>
               <div className="input-group">
                 <input
                   type="text"
@@ -467,6 +381,7 @@ function App() {
           <div className="content auth-page">
             <div className="auth-form-card">
               <h2 className="section-title">Login</h2>
+              <p className="auth-subtitle">Sign in to continue shopping and view your profile.</p>
               <div className="input-group">
                 <input
                   type="text"
@@ -754,6 +669,7 @@ function App() {
     { name: 'Products', page: 'products', visible: true },
     { name: 'Cart', page: 'cart', visible: true },
     { name: 'Wishlist', page: 'wishlist', visible: isLoggedIn },
+    { name: 'Profile', page: 'profile', visible: isLoggedIn },
     { name: 'Orders', page: 'orders', visible: isLoggedIn },
     { name: 'Register', page: 'register', visible: !isLoggedIn },
     { name: 'Login', page: 'login', visible: !isLoggedIn },
@@ -1022,6 +938,7 @@ function App() {
           align-items: center;
           justify-content: center;
           flex-grow: 1;
+          background: radial-gradient(circle at top, #1d4ed8 0, #f9fafb 55%);
         }
 
         .auth-form-card {
@@ -1032,6 +949,12 @@ function App() {
           border-radius: 1rem;
           box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
           text-align: center;
+        }
+
+        .auth-subtitle {
+          font-size: 0.95rem;
+          color: var(--text-light-gray);
+          margin-bottom: 1.5rem;
         }
 
         .input-group {
@@ -1323,7 +1246,102 @@ function App() {
             max-width: 40rem;
           }
         }
-        `}
+
+        .profile-page {
+          align-items: center;
+          justify-content: center;
+        }
+
+        .profile-card {
+          width: 100%;
+          max-width: 40rem;
+          padding: 2rem;
+          background-color: var(--bg-white);
+          border-radius: 1.25rem;
+          box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.2),
+                      0 10px 10px -5px rgba(15, 23, 42, 0.1);
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+
+        .profile-header {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+        }
+
+        .profile-avatar {
+          width: 3.5rem;
+          height: 3.5rem;
+          border-radius: 9999px;
+          background-color: var(--blue-600);
+          color: var(--bg-white);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+          font-weight: 700;
+        }
+
+        .profile-name {
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin: 0;
+        }
+
+        .profile-username {
+          font-size: 0.9rem;
+          color: var(--text-light-gray);
+        }
+
+        .profile-details {
+          border-top: 1px solid #e5e7eb;
+          padding-top: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
+        .profile-detail-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.95rem;
+        }
+
+        .profile-label {
+          color: var(--text-light-gray);
+        }
+
+        .profile-value {
+          font-weight: 500;
+        }
+
+        .profile-stats {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 1rem;
+          margin-top: 0.5rem;
+        }
+
+        .profile-stat {
+          background-color: #eff6ff;
+          border-radius: 0.75rem;
+          padding: 0.75rem;
+          text-align: center;
+        }
+
+        .profile-stat-number {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: var(--blue-700);
+        }
+
+        .profile-stat-label {
+          font-size: 0.8rem;
+          color: var(--text-light-gray);
+        }
+      `}
       </style>
 
       <header className="header">
@@ -1331,7 +1349,9 @@ function App() {
           <div className="logo-area">
             <h1 className="logo">Our Store</h1>
             {isLoggedIn && (
-              <p className="header-greeting">Hello, User #{userId}</p>
+              <p className="header-greeting">
+                Hello, {profile?.firstName || profile?.username || loggedInUsername || `User #${userId}`}
+              </p>
             )}
           </div>
           <div className="search-container">

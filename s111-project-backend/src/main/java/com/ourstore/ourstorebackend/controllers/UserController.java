@@ -37,6 +37,7 @@ public class UserController {
     public Map<String, String> loginUser(@RequestBody User user) {
         Map<String, String> response = new HashMap<>();
         User foundUser = userRepository.findByUsernameAndPassword(user.getUsername(), user.getPassword());
+
         if (foundUser != null) {
             response.put("message", "Login successful!");
             response.put("userId", foundUser.getId().toString());
@@ -51,5 +52,23 @@ public class UserController {
 
         response.put("message", "Invalid credentials.");
         return response;
+    }
+
+    @GetMapping("/{id}")
+    public Map<String, Object> getUserProfile(@PathVariable Long id) {
+        User user = userRepository.findById(id).orElseThrow();
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("id", user.getId());
+        resp.put("username", user.getUsername());
+        resp.put("email", user.getEmail());
+        resp.put("firstName", user.getFirstName());
+        resp.put("lastName", user.getLastName());
+        resp.put("phoneNumber", user.getPhoneNumber());
+        resp.put("address", user.getAddress());
+        resp.put("city", user.getCity());
+        resp.put("postalCode", user.getPostalCode());
+        resp.put("country", user.getCountry());
+        resp.put("dateCreated", user.getDateCreated());
+        return resp;
     }
 }
