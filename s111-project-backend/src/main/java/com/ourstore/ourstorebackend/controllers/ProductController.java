@@ -27,6 +27,11 @@ public class ProductController {
         return productRepository.save(product);
     }
     
+    @DeleteMapping("/{id}")
+    public void deleteProduct(@PathVariable Long id) {
+        productRepository.deleteById(id);
+    }
+    
     @PostMapping("/add-dummy-data")
     public String addDummyData() {
         if (productRepository.count() == 0) {
