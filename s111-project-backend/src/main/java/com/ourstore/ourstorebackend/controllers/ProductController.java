@@ -11,7 +11,7 @@ import java.util.Random;
 
 @RestController
 @RequestMapping("/api/products")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:8082", "*"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:8082"})
 public class ProductController {
 
     @Autowired
