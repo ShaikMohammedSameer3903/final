@@ -284,6 +284,90 @@ function App() {
     }
   };
 
+  const handlePlaceOrder = async () => {
+    if (!userId) {
+      setOrderMessage('You must be logged in to place an order.');
+      return;
+    }
+    if (cart.length === 0) {
+      setOrderMessage('Your cart is empty.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setOrderMessage(data?.message || 'Failed to place order.');
+        return;
+      }
+      setOrderMessage('Order placed successfully! Your order ID is ' + data.orderId);
+      setCart([]); // Clear cart
+      fetchOrders(userId); // Refresh orders
+    } catch (error) {
+      setOrderMessage('Error placing order. Please try again.');
+    }
+  };
+
+  const handleAdminInputChange = (field, value) => {
+    setAdminForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const resetAdminForm = () => {
+    setAdminForm({
+      id: null, name: '', description: '', price: '',
+      stockQuantity: '', sku: '', imageUrl: '', active: true,
+    });
+  };
+
+  const handleAdminSaveProduct = async () => {
+    const { id, ...productData } = adminForm;
+    const url = id ? `${API_BASE_URL}/products/${id}` : `${API_BASE_URL}/products`;
+    const method = id ? 'PUT' : 'POST';
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setAdminMessage(data?.message || 'Failed to save product.');
+        return;
+      }
+      setAdminMessage(`Product ${id ? 'updated' : 'created'} successfully.`);
+      resetAdminForm();
+      fetchProducts();
+    } catch (error) {
+      setAdminMessage('Error saving product.');
+    }
+  };
+
+  const handleAdminEditProduct = (product) => {
+    setAdminForm({ ...product, price: product.price.toString() });
+  };
+
+  const handleAdminDeleteProduct = async (productId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        setAdminMessage(error?.message || 'Failed to delete product.');
+        return;
+      }
+      setAdminMessage('Product deleted successfully.');
+      fetchProducts();
+    } catch (error) {
+      setAdminMessage('Error deleting product.');
+    }
+  };
+
   const renderContent = () => {
     switch (currentPage) {
       case 'home':
