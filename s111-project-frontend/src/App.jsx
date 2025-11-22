@@ -247,7 +247,7 @@ function App() {
       return;
     }
     try {
-      const response = await fetch(`${API_BASE_URL}/wishlist/add/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/wishlist/${userId}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: product.id }),
