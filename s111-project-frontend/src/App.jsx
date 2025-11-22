@@ -200,6 +200,49 @@ function App() {
     }
   };
 
+  const handleAddToWishlist = async (product) => {
+    if (!userId) {
+      setFeedback('Please login to add items to your wishlist.');
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/wishlist/add/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: product.id }),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        setFeedback(error?.message || 'Failed to add to wishlist.');
+        return;
+      }
+      setFeedback('Added to wishlist!');
+      fetchWishlist(userId); // Refresh wishlist
+    } catch (error) {
+      setFeedback('Error adding to wishlist. Please try again.');
+    }
+  };
+
+  const handleRemoveFromWishlist = async (productId) => {
+    if (!userId) {
+      setFeedback('Please login to manage your wishlist.');
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/wishlist/remove/${userId}/${productId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        setFeedback(error?.message || 'Failed to remove from wishlist.');
+        return;
+      }
+      setWishlist(wishlist.filter(item => item.id !== productId));
+    } catch (error) {
+      setFeedback('Error removing from wishlist. Please try again.');
+    }
+  };
+
   const renderContent = () => {
     switch (currentPage) {
       case 'home':
