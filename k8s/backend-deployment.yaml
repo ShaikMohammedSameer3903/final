@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ourstore-backend
+  labels:
+    app: ourstore-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ourstore-backend
+  template:
+    metadata:
+      labels:
+        app: ourstore-backend
+    spec:
+      containers:
+        - name: ourstore-backend
+          image: ourstore/ourstore-backend:latest
+          env:
+            - name: SERVER_PORT
+              value: "8081"
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ourstore-config
+                  key: spring.datasource.url
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: ourstore-db-secret
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ourstore-db-secret
+                  key: password
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: "update"
+          ports:
+            - containerPort: 8081
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ourstore-backend
+spec:
+  selector:
+    app: ourstore-backend
+  ports:
+    - port: 8081
+      targetPort: 8081
+      protocol: TCP
+  type: ClusterIP

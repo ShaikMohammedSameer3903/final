@@ -1,0 +1,24 @@
+---
+- name: Ensure required apt packages are installed (Debian/Ubuntu)
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Install Docker using convenience script (Linux)
+  shell: |
+    curl -fsSL https://get.docker.com | sh
+  args:
+    warn: false
+  when: ansible_os_family in ['Debian', 'RedHat']
+
+- name: Ensure Docker service is running
+  service:
+    name: docker
+    state: started
+    enabled: true

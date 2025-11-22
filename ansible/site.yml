@@ -1,0 +1,9 @@
+---
+- hosts: all
+  become: true
+  vars:
+    project_root: /opt/ourstore
+  roles:
+    - docker
+    - kubernetes
+    - ourstore-app
