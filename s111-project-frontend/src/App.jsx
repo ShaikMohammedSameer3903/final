@@ -30,10 +30,8 @@ function App() {
   const [adminMessage, setAdminMessage] = useState('');
 
   const getProductImage = (product) => {
-    if (product && product.imageUrl) {
-      return product.imageUrl;
-    }
-    return 'https://via.placeholder.com/400x300?text=Our+Store';
+    const label = encodeURIComponent(product?.name || 'Our Store');
+    return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='400' height='300' fill='%231d4ed8'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-size='20'>${label}</text></svg>`;
   };
 
   // API base: use same-origin Nginx proxy to avoid CORS issues in Docker

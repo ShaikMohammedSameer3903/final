@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/cart")
@@ -28,7 +29,7 @@ public class CartController {
     private UserRepository userRepository;
 
     @GetMapping("/{userId}")
-    public ShoppingCart getCart(@PathVariable Long userId) {
+    public Map<String, Object> getCart(@PathVariable Long userId) {
         User user = userRepository.findById(userId).orElseThrow();
         ShoppingCart cart = shoppingCartRepository.findByUser(user);
         if (cart == null) {
@@ -36,11 +37,11 @@ public class CartController {
             cart.setUser(user);
             cart = shoppingCartRepository.save(cart);
         }
-        return cart;
+        return convertCartToDto(cart);
     }
 
     @PostMapping("/{userId}/items")
-    public ShoppingCart addItemToCart(@PathVariable Long userId, @RequestBody Map<String, Object> payload) {
+    public Map<String, Object> addItemToCart(@PathVariable Long userId, @RequestBody Map<String, Object> payload) {
         Long productId = ((Number) payload.get("productId")).longValue();
         int quantity = ((Number) payload.getOrDefault("quantity", 1)).intValue();
 
@@ -71,12 +72,12 @@ public class CartController {
         }
 
         recalculateCartTotals(cart);
-        shoppingCartRepository.save(cart);
-        return cart;
+        cart = shoppingCartRepository.save(cart);
+        return convertCartToDto(cart);
     }
 
     @DeleteMapping("/{userId}/items/{itemId}")
-    public ShoppingCart removeItem(@PathVariable Long userId, @PathVariable Long itemId) {
+    public Map<String, Object> removeItem(@PathVariable Long userId, @PathVariable Long itemId) {
         User user = userRepository.findById(userId).orElseThrow();
         ShoppingCart cart = shoppingCartRepository.findByUser(user);
         if (cart == null) {
@@ -85,8 +86,8 @@ public class CartController {
         cart.getCartItems().removeIf(ci -> ci.getId().equals(itemId));
         cartItemRepository.deleteById(itemId);
         recalculateCartTotals(cart);
-        shoppingCartRepository.save(cart);
-        return cart;
+        cart = shoppingCartRepository.save(cart);
+        return convertCartToDto(cart);
     }
 
     @DeleteMapping("/{userId}")
@@ -113,5 +114,33 @@ public class CartController {
         }
         cart.setTotalItems(totalItems);
         cart.setTotalPrice(totalPrice);
+    }
+
+    private Map<String, Object> convertCartToDto(ShoppingCart cart) {
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("id", cart.getId());
+        dto.put("totalItems", cart.getTotalItems());
+        dto.put("totalPrice", cart.getTotalPrice());
+
+        dto.put("cartItems", cart.getCartItems().stream().map(ci -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", ci.getId());
+            item.put("quantity", ci.getQuantity());
+            item.put("unitPrice", ci.getUnitPrice());
+
+            Product product = ci.getProduct();
+            if (product != null) {
+                Map<String, Object> productDto = new HashMap<>();
+                productDto.put("id", product.getId());
+                productDto.put("name", product.getName());
+                productDto.put("description", product.getDescription());
+                productDto.put("price", product.getPrice());
+                productDto.put("imageUrl", product.getImageUrl());
+                item.put("product", productDto);
+            }
+            return item;
+        }).collect(Collectors.toList()));
+
+        return dto;
     }
 }
