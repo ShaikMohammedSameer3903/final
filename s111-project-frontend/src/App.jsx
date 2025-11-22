@@ -29,6 +29,13 @@ function App() {
   });
   const [adminMessage, setAdminMessage] = useState('');
 
+  const getProductImage = (product) => {
+    if (product && product.imageUrl) {
+      return product.imageUrl;
+    }
+    return 'https://via.placeholder.com/400x300?text=Our+Store';
+  };
+
   // API base: use same-origin Nginx proxy to avoid CORS issues in Docker
   const API_BASE_URL = '/api';
 
@@ -351,20 +358,45 @@ function App() {
       case 'home':
         return (
           <div className="content home">
-            <h1 className="main-title">Welcome to Our Store</h1>
-            <p className="subtitle">Your one-stop shop for everything you need.</p>
-            <div className="deals-card">
-              <h2 className="section-title">Featured Deals</h2>
-              <div className="deals-grid">
-                <div className="deal-item deal-green">
-                  <h3>50% off on all headphones!</h3>
+            <div className="home-hero">
+              <div className="home-hero-text">
+                <h1 className="main-title">Welcome to Our Store</h1>
+                <p className="subtitle">
+                  Discover best deals on mobiles, fashion, electronics, groceries and more.
+                </p>
+                <button
+                  type="button"
+                  className="auth-button login-button home-hero-button"
+                  onClick={() => setCurrentPage('products')}
+                >
+                  Start Shopping
+                </button>
+              </div>
+              <div className="home-hero-deals">
+                <div className="deals-card">
+                  <h2 className="section-title">Today&apos;s top picks</h2>
+                  <div className="deals-grid">
+                    <div className="deal-item deal-green">
+                      <h3>Up to 50% off on headphones</h3>
+                    </div>
+                    <div className="deal-item deal-purple">
+                      <h3>Buy 1 Get 1 on fashion</h3>
+                    </div>
+                    <div className="deal-item deal-red">
+                      <h3>Free delivery on prime deals</h3>
+                    </div>
+                  </div>
                 </div>
-                <div className="deal-item deal-purple">
-                  <h3>Buy 1 Get 1 Free on Shirts</h3>
-                </div>
-                <div className="deal-item deal-red">
-                  <h3>Free Shipping on all orders!</h3>
-                </div>
+              </div>
+            </div>
+            <div className="home-categories-section">
+              <h2 className="section-title">Shop by category</h2>
+              <div className="home-categories-grid">
+                {['Mobiles', 'Electronics', 'Fashion', 'Home & Kitchen', 'Beauty', 'Grocery'].map(cat => (
+                  <div key={cat} className="home-category-card">
+                    <p>{cat}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -470,12 +502,19 @@ function App() {
             <div className="products-grid">
               {products.map(product => (
                 <div key={product.id} className="product-card">
-                  <div>
+                  <div className="product-image-wrapper">
+                    <img
+                      src={getProductImage(product)}
+                      alt={product.name}
+                      className="product-image"
+                    />
+                  </div>
+                  <div className="product-card-body">
                     <h3 className="product-name">{product.name}</h3>
                     <p className="product-description">{product.description}</p>
                     <p className="product-price">${product.price.toFixed(2)}</p>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div className="product-card-actions">
                     <button
                       onClick={() => addToCart(product)}
                       className="add-to-cart-button"
@@ -512,12 +551,19 @@ function App() {
               <div className="products-grid">
                 {wishlist.map(product => (
                   <div key={product.id} className="product-card">
-                    <div>
+                    <div className="product-image-wrapper">
+                      <img
+                        src={getProductImage(product)}
+                        alt={product.name}
+                        className="product-image"
+                      />
+                    </div>
+                    <div className="product-card-body">
                       <h3 className="product-name">{product.name}</h3>
                       <p className="product-description">{product.description}</p>
                       <p className="product-price">${product.price.toFixed(2)}</p>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div className="product-card-actions">
                       <button
                         onClick={() => addToCart(product)}
                         className="add-to-cart-button"
@@ -629,14 +675,21 @@ function App() {
             <div className="products-grid">
               {products.map(product => (
                 <div key={product.id} className="product-card">
-                  <div>
+                  <div className="product-image-wrapper">
+                    <img
+                      src={getProductImage(product)}
+                      alt={product.name}
+                      className="product-image"
+                    />
+                  </div>
+                  <div className="product-card-body">
                     <h3 className="product-name">{product.name}</h3>
                     <p className="product-description">{product.description}</p>
                     <p className="product-price">${product.price.toFixed(2)}</p>
                     <p className="product-description">Stock: {product.stockQuantity ?? 0}</p>
                     <p className="product-description">SKU: {product.sku || '-'}</p>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div className="product-card-actions">
                     <button
                       onClick={() => handleAdminEditProduct(product)}
                       className="add-to-cart-button"
@@ -1051,6 +1104,35 @@ function App() {
 
         .product-card:hover {
           transform: scale(1.05);
+        }
+
+        .product-image-wrapper {
+          width: 100%;
+          margin-bottom: 1rem;
+          border-radius: 0.75rem;
+          overflow: hidden;
+          background-color: #e5e7eb;
+        }
+
+        .product-image {
+          width: 100%;
+          height: 180px;
+          object-fit: cover;
+          display: block;
+        }
+
+        .product-card-body {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .product-card-actions {
+          margin-top: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
         }
 
         .product-name {

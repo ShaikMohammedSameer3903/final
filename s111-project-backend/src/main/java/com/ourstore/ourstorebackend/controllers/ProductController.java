@@ -37,6 +37,10 @@ public class ProductController {
                 product.setDescription("A great description for product " + i + ".");
                 double randomPrice = random.nextDouble() * 100 + 10;
                 product.setPrice(BigDecimal.valueOf(randomPrice));
+                product.setStockQuantity(50);
+                product.setSku("SKU-" + i);
+                product.setImageUrl("https://via.placeholder.com/400x300?text=Product+" + i);
+                product.setActive(true);
                 productRepository.save(product);
             }
             return "Dummy data added successfully.";
