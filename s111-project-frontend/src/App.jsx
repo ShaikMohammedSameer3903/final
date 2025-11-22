@@ -741,9 +741,9 @@ function App() {
         }
 
         .header {
-          background-color: var(--bg-white);
+          background-color: var(--blue-800);
           box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-          padding: 1rem;
+          padding: 0.75rem 1rem 0.5rem;
           position: sticky;
           top: 0;
           z-index: 50;
@@ -759,10 +759,22 @@ function App() {
           gap: 1rem;
         }
 
+        .logo-area {
+          display: flex;
+          flex-direction: column;
+          gap: 0.15rem;
+        }
+
         .logo {
           font-size: 1.875rem;
           font-weight: 800;
-          color: var(--blue-800);
+          color: var(--bg-white);
+        }
+
+        .header-greeting {
+          font-size: 0.8rem;
+          color: var(--bg-white);
+          opacity: 0.9;
         }
 
         .search-container {
@@ -770,17 +782,38 @@ function App() {
           max-width: 32rem;
         }
 
+        .search-wrapper {
+          display: flex;
+          align-items: stretch;
+          background-color: var(--bg-white);
+          border-radius: 0.5rem;
+          overflow: hidden;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
         .search-input {
           width: 100%;
-          padding: 0.5rem;
-          border-radius: 0.5rem;
-          border: 1px solid var(--border-gray);
-          transition: all 0.3s ease;
+          padding: 0.6rem 0.75rem;
+          border: none;
+          outline: none;
         }
 
         .search-input:focus {
           outline: none;
-          box-shadow: 0 0 0 2px var(--blue-600);
+        }
+
+        .search-button {
+          padding: 0 1.25rem;
+          background-color: var(--blue-600);
+          color: var(--bg-white);
+          border: none;
+          font-weight: 600;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+
+        .search-button:hover {
+          background-color: var(--blue-700);
         }
 
         .nav {
@@ -791,14 +824,49 @@ function App() {
         }
 
         .nav-link {
-          color: var(--text-gray);
+          color: var(--bg-white);
           font-weight: 600;
-          transition: color 0.3s ease;
+          transition: color 0.2s ease, border-color 0.2s ease;
           cursor: pointer;
+          padding-bottom: 0.15rem;
+          border-bottom: 2px solid transparent;
         }
 
         .nav-link:hover {
-          color: var(--blue-600);
+          color: #e5e7eb;
+        }
+
+        .nav-link-active {
+          border-bottom-color: var(--bg-white);
+        }
+
+        .category-bar {
+          margin-top: 0.5rem;
+          background-color: #1d4ed8;
+        }
+
+        .category-scroll {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 0.35rem 0.5rem 0.6rem;
+          display: flex;
+          gap: 0.5rem;
+          overflow-x: auto;
+        }
+
+        .category-chip {
+          border: none;
+          border-radius: 9999px;
+          padding: 0.35rem 0.9rem;
+          font-size: 0.85rem;
+          background-color: var(--bg-white);
+          color: var(--text-gray);
+          white-space: nowrap;
+          cursor: pointer;
+        }
+
+        .category-chip:hover {
+          background-color: #e5e7eb;
         }
 
         .logout-button {
@@ -808,7 +876,6 @@ function App() {
           border-radius: 0.5rem;
           font-weight: 600;
           transition: background-color 0.3s ease;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
           border: none;
           cursor: pointer;
         }
@@ -903,7 +970,7 @@ function App() {
         .auth-page {
           align-items: center;
           justify-content: center;
-          flex-grow: 1; /* This is the key fix */
+          flex-grow: 1;
         }
 
         .auth-form-card {
@@ -948,7 +1015,7 @@ function App() {
         }
         
         .auth-button:hover {
-            background-color: var(--blue-700);
+          background-color: var(--blue-700);
         }
 
         .register-button {
@@ -1018,28 +1085,28 @@ function App() {
         }
         
         .add-to-cart-button:hover {
-            background-color: var(--blue-700);
+          background-color: var(--blue-700);
         }
 
         .empty-cart-message {
           text-align: center;
           color: var(--text-light-gray);
           font-size: 1.25rem;
-          flex-grow: 1; /* This is the key fix */
+          flex-grow: 1;
         }
 
         .cart-page {
           display: flex;
           flex-direction: column;
-          flex-grow: 1; /* This is the key fix */
+          flex-grow: 1;
         }
 
         .cart-container {
           display: flex;
           flex-direction: column;
           align-items: center;
-          flex-grow: 1; /* This is the key fix */
-          justify-content: center; /* Center the cart content */
+          flex-grow: 1;
+          justify-content: center;
         }
 
         .cart-items-list {
@@ -1166,31 +1233,51 @@ function App() {
           .products-grid {
             grid-template-columns: repeat(4, 1fr);
           }
+
+          .search-container {
+            width: 100%;
+            max-width: 40rem;
+          }
+
+          .search-wrapper {
+            max-width: 40rem;
+          }
         }
         `}
       </style>
+
       <header className="header">
         <div className="header-container">
-          <h1 className="logo">Our Store</h1>
+          <div className="logo-area">
+            <h1 className="logo">Our Store</h1>
+            {isLoggedIn && (
+              <p className="header-greeting">Hello, User #{userId}</p>
+            )}
+          </div>
           <div className="search-container">
-            <input
-              type="text"
-              placeholder="Search products..."
-              className="search-input"
-            />
+            <div className="search-wrapper">
+              <input
+                type="text"
+                placeholder="Search for products, brands and more..."
+                className="search-input"
+              />
+              <button type="button" className="search-button">Search</button>
+            </div>
           </div>
           <nav className="nav">
             {navItems.map(item => item.visible && (
-              <a
+              <button
                 key={item.page}
+                type="button"
                 onClick={() => setCurrentPage(item.page)}
                 className={`nav-link ${currentPage === item.page ? 'nav-link-active' : ''}`}
               >
                 {item.name}
-              </a>
+              </button>
             ))}
             {isLoggedIn && (
               <button
+                type="button"
                 onClick={handleLogout}
                 className="logout-button"
               >
@@ -1198,6 +1285,15 @@ function App() {
               </button>
             )}
           </nav>
+        </div>
+        <div className="category-bar">
+          <div className="category-scroll">
+            {['Best Sellers','Mobiles','Fashion','Electronics','Home & Kitchen','Beauty','Books','Grocery'].map(label => (
+              <button key={label} type="button" className="category-chip">
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
