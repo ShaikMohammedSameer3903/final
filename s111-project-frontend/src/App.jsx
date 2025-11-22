@@ -1184,7 +1184,7 @@ function App() {
               <a
                 key={item.page}
                 onClick={() => setCurrentPage(item.page)}
-                className="nav-link"
+                className={`nav-link ${currentPage === item.page ? 'nav-link-active' : ''}`}
               >
                 {item.name}
               </a>

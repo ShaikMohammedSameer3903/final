@@ -24,6 +24,10 @@ public class UserController {
             response.put("message", "User already exists.");
             return response;
         }
+        // If email is not provided, generate a simple default to satisfy DB constraints
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            user.setEmail(user.getUsername() + "@example.com");
+        }
         userRepository.save(user);
         response.put("message", "Registration successful!");
         return response;
