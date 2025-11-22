@@ -30,6 +30,9 @@ function App() {
   const [adminMessage, setAdminMessage] = useState('');
   const [profile, setProfile] = useState(null);
   const [loggedInUsername, setLoggedInUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
 
   const getProductImage = (product) => {
     const label = encodeURIComponent(product?.name || 'Our Store');
@@ -89,8 +92,8 @@ function App() {
 
   const handleRegister = async () => {
     setFeedback('');
-    if (!username || !password) {
-      setFeedback('Username and password are required.');
+    if (!username || !password || !email || !firstName || !lastName) {
+      setFeedback('All fields are required for registration.');
       return;
     }
 
@@ -98,7 +101,7 @@ function App() {
       const response = await fetch(`${API_BASE_URL}/users/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, email, firstName, lastName }),
       });
       const data = await response.json().catch(() => ({ message: 'Unexpected response from server.' }));
       if (!response.ok) {
@@ -109,6 +112,9 @@ function App() {
       if (data.message.includes('successful')) {
         setUsername('');
         setPassword('');
+        setEmail('');
+        setFirstName('');
+        setLastName('');
         setCurrentPage('login');
       }
     } catch (error) {
@@ -212,49 +218,6 @@ function App() {
     }
   };
 
-  const handleAddToWishlist = async (product) => {
-    if (!userId) {
-      setFeedback('Please login to add items to your wishlist.');
-      return;
-    }
-    try {
-      const response = await fetch(`${API_BASE_URL}/wishlist/${userId}/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: product.id }),
-      });
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        setFeedback(error?.message || 'Failed to add to wishlist.');
-        return;
-      }
-      setFeedback('Added to wishlist!');
-      fetchWishlist(userId);
-    } catch (error) {
-      setFeedback('Error adding to wishlist. Please try again.');
-    }
-  };
-
-  const handleRemoveFromWishlist = async (productId) => {
-    if (!userId) {
-      setFeedback('Please login to manage your wishlist.');
-      return;
-    }
-    try {
-      const response = await fetch(`${API_BASE_URL}/wishlist/${userId}/items/${productId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        setFeedback(error?.message || 'Failed to remove from wishlist.');
-        return;
-      }
-      setWishlist(wishlist.filter(item => item.id !== productId));
-    } catch (error) {
-      setFeedback('Error removing from wishlist. Please try again.');
-    }
-  };
-
   const addToCart = async (product) => {
     if (!userId) {
       setFeedback('Please login to add items to your cart.');
@@ -278,122 +241,46 @@ function App() {
     }
   };
 
-  const handlePlaceOrder = async () => {
+  const handleAddToWishlist = async (product) => {
     if (!userId) {
-      setOrderMessage('Please login to place an order.');
-      return;
-    }
-    if (cart.length === 0) {
-      setOrderMessage('Your cart is empty.');
+      setFeedback('Please login to add items to your wishlist.');
       return;
     }
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${userId}`, {
-        method: 'POST',
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setOrderMessage(data?.message || 'Failed to place order.');
-        return;
-      }
-      setOrderMessage(data?.message || 'Order placed successfully.');
-      fetchCart(userId);
-      fetchOrders(userId);
-      fetchProfile(userId);
-    } catch (error) {
-      setOrderMessage('Error placing order. Please try again.');
-    }
-  };
-
-  const handleAdminInputChange = (field, value) => {
-    setAdminForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const resetAdminForm = () => {
-    setAdminForm({
-      id: null,
-      name: '',
-      description: '',
-      price: '',
-      stockQuantity: '',
-      sku: '',
-      imageUrl: '',
-      active: true,
-    });
-    setAdminMessage('');
-  };
-
-  const handleAdminSaveProduct = async () => {
-    if (!adminForm.name || adminForm.price === '') {
-      setAdminMessage('Name and price are required.');
-      return;
-    }
-    try {
-      const payload = {
-        id: adminForm.id,
-        name: adminForm.name,
-        description: adminForm.description,
-        price: Number(adminForm.price),
-        stockQuantity: adminForm.stockQuantity === '' ? 0 : Number(adminForm.stockQuantity),
-        sku: adminForm.sku,
-        imageUrl: adminForm.imageUrl,
-        active: adminForm.active,
-      };
-      const response = await fetch(`${API_BASE_URL}/products`, {
+      const response = await fetch(`${API_BASE_URL}/wishlist/add/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ productId: product.id }),
       });
-      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setAdminMessage(data?.message || 'Failed to save product.');
+        const error = await response.json().catch(() => ({}));
+        setFeedback(error?.message || 'Failed to add to wishlist.');
         return;
       }
-      setAdminMessage(adminForm.id ? 'Product updated successfully.' : 'Product created successfully.');
-      resetAdminForm();
-      fetchProducts();
+      setFeedback('Added to wishlist!');
+      fetchWishlist(userId); // Refresh wishlist
     } catch (error) {
-      setAdminMessage('Error saving product. Please try again.');
+      setFeedback('Error adding to wishlist. Please try again.');
     }
   };
 
-  const handleAdminEditProduct = (product) => {
-    setAdminForm({
-      id: product.id,
-      name: product.name || '',
-      description: product.description || '',
-      price: product.price != null ? product.price : '',
-      stockQuantity: product.stockQuantity != null ? product.stockQuantity : '',
-      sku: product.sku || '',
-      imageUrl: product.imageUrl || '',
-      active: product.active ?? true,
-    });
-    setAdminMessage('');
-  };
-
-  const handleAdminDeleteProduct = async (productId) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) {
+  const handleRemoveFromWishlist = async (productId) => {
+    if (!userId) {
+      setFeedback('Please login to manage your wishlist.');
       return;
     }
     try {
-      const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+      const response = await fetch(`${API_BASE_URL}/wishlist/remove/${userId}/${productId}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        setAdminMessage(error?.message || 'Failed to delete product.');
+        setFeedback(error?.message || 'Failed to remove from wishlist.');
         return;
       }
-      setAdminMessage('Product deleted successfully.');
-      if (adminForm.id === productId) {
-        resetAdminForm();
-      }
-      fetchProducts();
+      setWishlist(wishlist.filter(item => item.id !== productId));
     } catch (error) {
-      setAdminMessage('Error deleting product. Please try again.');
+      setFeedback('Error removing from wishlist. Please try again.');
     }
   };
 
@@ -402,13 +289,49 @@ function App() {
       case 'home':
         return (
           <div className="content home">
-            <h1 className="main-title">Welcome to Our Store</h1>
-            <p className="subtitle">
-              Discover best deals on mobiles, fashion, electronics, groceries and more.
-            </p>
+            <div className="home-hero">
+              <div className="home-hero-text">
+                <h1 className="main-title">Welcome to Our Store</h1>
+                <p className="subtitle">
+                  Discover best deals on mobiles, fashion, electronics, groceries and more.
+                </p>
+                <button
+                  type="button"
+                  className="auth-button login-button home-hero-button"
+                  onClick={() => setCurrentPage('products')}
+                >
+                  Start Shopping
+                </button>
+              </div>
+              <div className="home-hero-deals">
+                <div className="deals-card">
+                  <h2 className="section-title">Today's top picks</h2>
+                  <div className="deals-grid">
+                    <div className="deal-item deal-green">
+                      <h3>Up to 50% off on headphones</h3>
+                    </div>
+                    <div className="deal-item deal-purple">
+                      <h3>Buy 1 Get 1 on fashion</h3>
+                    </div>
+                    <div className="deal-item deal-red">
+                      <h3>Free delivery on prime deals</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="home-categories-section">
+              <h2 className="section-title">Shop by category</h2>
+              <div className="home-categories-grid">
+                {['Mobiles', 'Electronics', 'Fashion', 'Home & Kitchen', 'Beauty', 'Grocery'].map(cat => (
+                  <div key={cat} className="home-category-card">
+                    <p>{cat}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         );
-
       case 'products':
         return (
           <div className="content products-page">
@@ -447,7 +370,6 @@ function App() {
             </div>
           </div>
         );
-
       case 'cart': {
         const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
         return (
@@ -489,7 +411,6 @@ function App() {
           </div>
         );
       }
-
       case 'wishlist':
         if (!userId) {
           return (
@@ -540,7 +461,6 @@ function App() {
             )}
           </div>
         );
-
       case 'profile':
         if (!isLoggedIn || !userId) {
           return (
@@ -553,11 +473,58 @@ function App() {
         return (
           <div className="content profile-page">
             <div className="profile-card">
-              {/* existing profile JSX is already correct below in your file */}
+              <div className="profile-header">
+                <div className="profile-avatar">
+                  {(profile?.firstName?.[0] || profile?.username?.[0] || loggedInUsername?.[0] || 'U').toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="profile-name">
+                    {profile?.firstName || profile?.username || loggedInUsername || `User #${userId}`}
+                  </h2>
+                  <p className="profile-username">@{profile?.username || loggedInUsername}</p>
+                </div>
+              </div>
+              <div className="profile-details">
+                <div className="profile-detail-row">
+                  <span className="profile-label">Email</span>
+                  <span className="profile-value">{profile?.email || 'Not set'}</span>
+                </div>
+                <div className="profile-detail-row">
+                  <span className="profile-label">Phone</span>
+                  <span className="profile-value">{profile?.phoneNumber || 'Not set'}</span>
+                </div>
+                <div className="profile-detail-row">
+                  <span className="profile-label">Address</span>
+                  <span className="profile-value">
+                    {profile?.address || profile?.city
+                      ? `${profile?.address || ''} ${profile?.city || ''}`.trim()
+                      : 'Not set'}
+                  </span>
+                </div>
+                <div className="profile-detail-row">
+                  <span className="profile-label">Country</span>
+                  <span className="profile-value">{profile?.country || 'Not set'}</span>
+                </div>
+              </div>
+              <div className="profile-stats">
+                <div className="profile-stat">
+                  <span className="profile-stat-number">{orders.length}</span>
+                  <span className="profile-stat-label">Orders</span>
+                </div>
+                <div className="profile-stat">
+                  <span className="profile-stat-number">
+                    {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                  </span>
+                  <span className="profile-stat-label">Items in Cart</span>
+                </div>
+                <div className="profile-stat">
+                  <span className="profile-stat-number">{wishlist.length}</span>
+                  <span className="profile-stat-label">Wishlist</span>
+                </div>
+              </div>
             </div>
           </div>
         );
-
       case 'orders':
         if (!userId) {
           return (
@@ -582,9 +549,7 @@ function App() {
                       <p>Items: {order.totalQuantity}</p>
                     </div>
                     <p className="cart-item-price">
-                      {order.totalPrice?.toFixed
-                        ? order.totalPrice.toFixed(2)
-                        : order.totalPrice}
+                      ${order.totalPrice?.toFixed ? order.totalPrice.toFixed(2) : order.totalPrice}
                     </p>
                   </div>
                 ))}
@@ -592,21 +557,101 @@ function App() {
             )}
           </div>
         );
-
       case 'register':
         return (
           <div className="content auth-page">
-            {/* your existing register JSX here */}
+            <div className="auth-form-card">
+              <h2 className="section-title">Register</h2>
+              <p className="auth-subtitle">Create your Our Store account to track orders and wishlist.</p>
+              <div className="input-group">
+                <input
+                  type="text"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="input-field"
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input-field"
+                />
+                <input
+                  type="text"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input-field"
+                />
+                <input
+                  type="text"
+                  placeholder="First Name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="input-field"
+                />
+                <input
+                  type="text"
+                  placeholder="Last Name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="input-field"
+                />
+                <button
+                  onClick={handleRegister}
+                  className="auth-button register-button"
+                >
+                  Register
+                </button>
+              </div>
+              {feedback && <p className="feedback-message">{feedback}</p>}
+            </div>
           </div>
         );
-
       case 'login':
         return (
           <div className="content auth-page">
-            {/* your existing login JSX here */}
+            <div className="auth-form-card">
+              <h2 className="section-title">Login</h2>
+              <p className="auth-subtitle">Sign in to continue shopping and view your profile.</p>
+              <div className="input-group">
+                <input
+                  type="text"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="input-field"
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="input-field"
+                />
+                <button
+                  type="button"
+                  className="auth-button login-button"
+                  onClick={handleLogin}
+                >
+                  Login
+                </button>
+                <button
+                  type="button"
+                  className="auth-button register-button"
+                  onClick={() => setCurrentPage('register')}
+                >
+                  Create an account
+                </button>
+              </div>
+              {feedback && (
+                <div className="feedback-message">{feedback}</div>
+              )}
+            </div>
           </div>
         );
-
       case 'admin':
         if (!isLoggedIn || !isAdmin) {
           return (
@@ -618,10 +663,158 @@ function App() {
         }
         return (
           <div className="content products-page">
-            {/* your existing admin form + products grid JSX, now using handleAdminEditProduct and handleAdminDeleteProduct */}
+            <h2 className="section-title text-center">Admin - Manage Products</h2>
+            <div className="auth-form-card" style={{ marginBottom: '2rem' }}>
+              <h3 className="section-title" style={{ marginBottom: '1rem' }}>
+                {adminForm.id ? 'Edit Product' : 'Add New Product'}
+              </h3>
+              <div className="input-group">
+                <input
+                  type="text"
+                  placeholder="Name"
+                  value={adminForm.name}
+                  onChange={(e) => handleAdminInputChange('name', e.target.value)}
+                  className="input-field"
+                />
+                <input
+                  type="text"
+                  placeholder="Description"
+                  value={adminForm.description}
+                  onChange={(e) => handleAdminInputChange('description', e.target.value)}
+                  className="input-field"
+                />
+                <input
+                  type="number"
+                  placeholder="Price"
+                  value={adminForm.price}
+                  onChange={(e) => handleAdminInputChange('price', e.target.value)}
+                  className="input-field"
+                  step="0.01"
+                />
+                <input
+                  type="number"
+                  placeholder="Stock Quantity"
+                  value={adminForm.stockQuantity}
+                  onChange={(e) => handleAdminInputChange('stockQuantity', e.target.value)}
+                  className="input-field"
+                />
+                <input
+                  type="text"
+                  placeholder="SKU"
+                  value={adminForm.sku}
+                  onChange={(e) => handleAdminInputChange('sku', e.target.value)}
+                  className="input-field"
+                />
+                <input
+                  type="text"
+                  placeholder="Image URL"
+                  value={adminForm.imageUrl}
+                  onChange={(e) => handleAdminInputChange('imageUrl', e.target.value)}
+                  className="input-field"
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={adminForm.active}
+                    onChange={(e) => handleAdminInputChange('active', e.target.checked)}
+                  />
+                  Active
+                </label>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    onClick={handleAdminSaveProduct}
+                    className="auth-button login-button"
+                  >
+                    {adminForm.id ? 'Update Product' : 'Create Product'}
+                  </button>
+                  {adminForm.id && (
+                    <button
+                      type="button"
+                      onClick={resetAdminForm}
+                      className="auth-button register-button"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                {adminMessage && <p className="feedback-message">{adminMessage}</p>}
+              </div>
+            </div>
+
+            <div className="products-grid">
+              {products.map(product => (
+                <div key={product.id} className="product-card">
+                  <div className="product-image-wrapper">
+                    <img
+                      src={getProductImage(product)}
+                      alt={product.name}
+                      className="product-image"
+                    />
+                  </div>
+                  <div className="product-card-body">
+                    <h3 className="product-name">{product.name}</h3>
+                    <p className="product-description">{product.description}</p>
+                    <p className="product-price">${product.price.toFixed(2)}</p>
+                    <p className="product-description">Stock: {product.stockQuantity ?? 0}</p>
+                    <p className="product-description">SKU: {product.sku || '-'}</p>
+                  </div>
+                  <div className="product-card-actions">
+                    <button
+                      onClick={() => handleAdminEditProduct(product)}
+                      className="add-to-cart-button"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleAdminDeleteProduct(product.id)}
+                      className="logout-button"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         );
-
+      case 'cart':
+        const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        return (
+          <div className="content cart-page">
+            <h2 className="section-title text-center">Your Cart</h2>
+            {cart.length === 0 ? (
+              <p className="empty-cart-message">Your cart is empty.</p>
+            ) : (
+              <div className="cart-container">
+                <div className="cart-items-list">
+                  {cart.map(item => (
+                    <div key={item.id} className="cart-item">
+                      <div>
+                        <h3>{item.name}</h3>
+                        <p>Quantity: {item.quantity}</p>
+                      </div>
+                      <p className="cart-item-price">${(item.price * item.quantity).toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="cart-summary">
+                  <p className="cart-total">Total: ${total.toFixed(2)}</p>
+                  <button
+                    onClick={handlePlaceOrder}
+                    className="place-order-button"
+                  >
+                    Place Order
+                  </button>
+                </div>
+                {orderMessage && (
+                  <div className="order-message">
+                    {orderMessage}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
       default:
         return null;
     }
