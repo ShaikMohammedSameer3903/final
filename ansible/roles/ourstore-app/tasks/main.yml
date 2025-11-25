@@ -10,6 +10,6 @@
     dest: "{{ project_root }}/k8s/"
 
 - name: Apply Kubernetes manifests
-  command: "kubectl apply -f {{ project_root }}/k8s/"
+  command: "kubectl apply --validate=false -f {{ project_root }}/k8s/"
   environment:
     KUBECONFIG: "{{ kubeconfig | default(omit) }}"

@@ -7,18 +7,50 @@
       - curl
       - gnupg
       - lsb-release
+      - software-properties-common
+    state: present
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
+
+- name: Add Docker's official GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
     state: present
   when: ansible_os_family == 'Debian'
 
-- name: Install Docker using convenience script (Linux)
+- name: Add Docker repository
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
+
+- name: Install Docker CE
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
+
+- name: Install Docker using convenience script (for non-Debian systems)
   shell: |
     curl -fsSL https://get.docker.com | sh
+  when: ansible_os_family not in ['Debian']
   args:
-    warn: false
-  when: ansible_os_family in ['Debian', 'RedHat']
+    creates: /usr/bin/docker
 
-- name: Ensure Docker service is running
+- name: Ensure Docker service is running and enabled
   service:
     name: docker
     state: started
-    enabled: true
+    enabled: yes
+
+- name: Add current user to docker group
+  user:
+    name: "{{ ansible_user_id | default(ansible_env.USER) }}"
+    groups: docker
+    append: yes
+  become: yes

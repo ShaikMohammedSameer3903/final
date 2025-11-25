@@ -16,7 +16,8 @@ spec:
     spec:
       containers:
         - name: ourstore-frontend
-          image: ourstore/ourstore-frontend:latest
+          image: ourstore-frontend:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
           env:
