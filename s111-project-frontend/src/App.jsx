@@ -33,16 +33,17 @@ function App() {
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [token, setToken] = useState('');
 
   const getProductImage = (product) => {
+    if (product?.imageUrl) return product.imageUrl;
     const label = encodeURIComponent(product?.name || 'Our Store');
     return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='400' height='300' fill='%231d4ed8'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-size='20'>${label}</text></svg>`;
   };
 
-  const fetchProfile = async (uid = userId) => {
-    if (!uid) return;
+  const fetchProfile = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/${uid}`);
+      const response = await authFetch(`${API_BASE_URL}/users/me`);
       if (!response.ok) return;
       const data = await response.json();
       setProfile(data);
@@ -54,6 +55,29 @@ function App() {
   // API base: use same-origin Nginx proxy to avoid CORS issues in Docker
   const API_BASE_URL = '/api';
 
+  const authHeaders = () => {
+    const effectiveToken = token || localStorage.getItem('token');
+    return effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {};
+  };
+
+  const authFetch = (url, options = {}) => {
+    const headers = { ...(options.headers || {}), ...authHeaders() };
+    return fetch(url, { ...options, headers });
+  };
+
+  // restore auth state from localStorage
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    const storedUserId = localStorage.getItem('userId');
+    const storedIsAdmin = localStorage.getItem('isAdmin');
+    if (storedToken && storedUserId) {
+      setToken(storedToken);
+      setUserId(Number(storedUserId));
+      setIsAdmin(storedIsAdmin === 'true');
+      setIsLoggedIn(true);
+    }
+  }, []);
+
   useEffect(() => {
     // Fetch products when the component mounts
     fetchProducts();
@@ -61,7 +85,7 @@ function App() {
 
   useEffect(() => {
     if (currentPage === 'profile' && isLoggedIn && userId && !profile) {
-      fetchProfile(userId);
+      fetchProfile();
     }
   }, [currentPage, isLoggedIn, userId, profile]);
 
@@ -73,16 +97,23 @@ function App() {
         console.error('Failed to fetch products:', data?.message || `Failed to fetch products (${response.status})`);
         return;
       }
-      if (data.length === 0) {
-        // If no products, add some dummy data
-        await fetch(`${API_BASE_URL}/products/add-dummy-data`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        const updatedResponse = await fetch(`${API_BASE_URL}/products`);
-        const updatedData = await updatedResponse.json();
-        setProducts(updatedData);
-      } else {
+      if (Array.isArray(data) && data.length === 0) {
+        if (isLoggedIn && isAdmin && token) {
+          const seedResp = await authFetch(`${API_BASE_URL}/products/add-dummy-data`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+          if (seedResp.ok) {
+            const updatedResponse = await fetch(`${API_BASE_URL}/products`);
+            const updatedData = await updatedResponse.json();
+            setProducts(Array.isArray(updatedData) ? updatedData : []);
+          } else {
+            setProducts([]);
+          }
+        } else {
+          setProducts([]);
+        }
+      } else if (Array.isArray(data)) {
         setProducts(data);
       }
     } catch (error) {
@@ -145,9 +176,16 @@ function App() {
         setIsLoggedIn(true);
         if (data.userId) {
           setUserId(data.userId);
+          localStorage.setItem('userId', String(data.userId));
         }
         setLoggedInUsername(username);
-        setIsAdmin(data.isAdmin === 'true');
+        const adminFlag = data.isAdmin === 'true' || data.isAdmin === true;
+        setIsAdmin(adminFlag);
+        localStorage.setItem('isAdmin', String(adminFlag));
+        if (data.token) {
+          setToken(data.token);
+          localStorage.setItem('token', data.token);
+        }
         setUsername('');
         setPassword('');
         setCurrentPage('products');
@@ -156,7 +194,7 @@ function App() {
         fetchCart(data.userId);
         fetchWishlist(data.userId);
         fetchOrders(data.userId);
-        fetchProfile(data.userId);
+        fetchProfile();
       }
     } catch (error) {
       setFeedback('Error during login. Please try again.');
@@ -166,6 +204,10 @@ function App() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setIsAdmin(false);
+    setToken('');
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('isAdmin');
     setUserId(null);
     setCart([]);
     setWishlist([]);
@@ -179,7 +221,7 @@ function App() {
   const fetchCart = async (uid = userId) => {
     if (!uid) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/cart/${uid}`);
+      const response = await authFetch(`${API_BASE_URL}/cart/${uid}`);
       if (!response.ok) return;
       const data = await response.json();
       setCart((data.cartItems || []).map(ci => ({
@@ -197,7 +239,7 @@ function App() {
   const fetchOrders = async (uid = userId) => {
     if (!uid) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${uid}`);
+      const response = await authFetch(`${API_BASE_URL}/orders/${uid}`);
       if (!response.ok) return;
       const data = await response.json();
       setOrders(data || []);
@@ -209,7 +251,7 @@ function App() {
   const fetchWishlist = async (uid = userId) => {
     if (!uid) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/wishlist/${uid}`);
+      const response = await authFetch(`${API_BASE_URL}/wishlist/${uid}`);
       if (!response.ok) return;
       const data = await response.json();
       setWishlist(data.products || []);
@@ -224,7 +266,7 @@ function App() {
       return;
     }
     try {
-      const response = await fetch(`${API_BASE_URL}/cart/${userId}/items`, {
+      const response = await authFetch(`${API_BASE_URL}/cart/${userId}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: product.id, quantity: 1 }),
@@ -247,7 +289,7 @@ function App() {
       return;
     }
     try {
-      const response = await fetch(`${API_BASE_URL}/wishlist/${userId}/items`, {
+      const response = await authFetch(`${API_BASE_URL}/wishlist/${userId}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: product.id }),
@@ -270,7 +312,7 @@ function App() {
       return;
     }
     try {
-      const response = await fetch(`${API_BASE_URL}/wishlist/remove/${userId}/${productId}`, {
+      const response = await authFetch(`${API_BASE_URL}/wishlist/remove/${userId}/${productId}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
@@ -295,7 +337,7 @@ function App() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${userId}`, {
+      const response = await authFetch(`${API_BASE_URL}/orders/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -329,7 +371,7 @@ function App() {
     const method = id ? 'PUT' : 'POST';
 
     try {
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(productData),
@@ -353,7 +395,7 @@ function App() {
 
   const handleAdminDeleteProduct = async (productId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+      const response = await authFetch(`${API_BASE_URL}/products/${productId}`, {
         method: 'DELETE',
       });
       if (!response.ok) {

@@ -3,6 +3,7 @@ package com.ourstore.ourstorebackend.controllers;
 import com.ourstore.ourstorebackend.entities.Product;
 import com.ourstore.ourstorebackend.repositories.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -22,17 +23,25 @@ public class ProductController {
         return productRepository.findAll();
     }
 
+    @GetMapping("/{id}")
+    public Product getProductById(@PathVariable Long id) {
+        return productRepository.findById(id).orElseThrow();
+    }
+
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public Product addProduct(@RequestBody Product product) {
         return productRepository.save(product);
     }
     
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteProduct(@PathVariable Long id) {
         productRepository.deleteById(id);
     }
     
     @PostMapping("/add-dummy-data")
+    @PreAuthorize("hasRole('ADMIN')")
     public String addDummyData() {
         if (productRepository.count() == 0) {
             Random random = new Random();
