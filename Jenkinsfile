@@ -157,7 +157,7 @@ pipeline {
               # Check MySQL health
               docker inspect ourstore-mysql --format '{{json .State.Health.Status}}' | grep -i healthy
               # Curl backend (retry on /api/products instead of actuator)
-              for i in $(seq 1 12); do curl -sSf http://localhost:8081/api/products && break || sleep 5; done
+              for i in $(seq 1 12); do curl -sSf http://localhost:8084/api/products && break || sleep 5; done
               # Curl frontend
               curl -sS http://localhost:8082 | head -n 5
             '''
@@ -174,7 +174,7 @@ pipeline {
               rem Retry backend /api/products up to 12 times (about 60s)
               set RET=1
               for /L %%i in (1,1,12) do (
-                curl -s -o NUL -w "%%{http_code}" http://localhost:8081/api/products > httpcode.txt
+                curl -s -o NUL -w "%%{http_code}" http://localhost:8084/api/products > httpcode.txt
                 set /p CODE=<httpcode.txt
                 del httpcode.txt
                 if "!CODE!"=="200" ( set RET=0 & goto :backend_ready )
@@ -184,7 +184,7 @@ pipeline {
               if %RET% NEQ 0 exit /b 1
 
               rem Show simple outputs
-              curl -s http://localhost:8081/api/products
+              curl -s http://localhost:8084/api/products
               curl -s http://localhost:8082 | more +1
               endlocal
             '''
