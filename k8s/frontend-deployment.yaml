@@ -5,7 +5,7 @@ metadata:
   labels:
     app: ourstore-frontend
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: ourstore-frontend
@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: ourstore-frontend
-          image: ourstore-frontend:latest
+          image: shaiksameer3909/ourstore-frontend:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
@@ -50,8 +50,9 @@ metadata:
 spec:
   selector:
     app: ourstore-frontend
+  type: NodePort
   ports:
     - protocol: TCP
       port: 80
       targetPort: 80
-  type: ClusterIP
+      nodePort: 30000

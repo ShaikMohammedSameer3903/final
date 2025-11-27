@@ -5,7 +5,7 @@ metadata:
   labels:
     app: ourstore-backend
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: ourstore-backend
@@ -16,8 +16,10 @@ spec:
     spec:
       containers:
         - name: ourstore-backend
-          image: ourstore-backend:latest
+          image: shaiksameer3909/ourstore-backend:latest
           imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8089
           env:
             - name: SERVER_PORT
               value: "8081"
@@ -48,8 +50,9 @@ metadata:
 spec:
   selector:
     app: ourstore-backend
+  type: NodePort
   ports:
-    - port: 8081
+    - protocol: TCP
+      port: 8081
       targetPort: 8081
-      protocol: TCP
-  type: ClusterIP
+      nodePort: 30001
